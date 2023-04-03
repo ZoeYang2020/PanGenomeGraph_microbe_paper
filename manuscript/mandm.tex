@@ -1,22 +1,33 @@
 %% Materials & Methods
 
-\subsection{Data generation}
-\subsubsection{Long read data}
-\subsubsection{Short read data}
-
-\subsection{Selection of pangenome graph tool}
-
-\subsection{Graph building}
-\subsubsection{Reference selection}
-\subsubsection{Settings & Runtimes}
-\subsubsection{Simulated data}
-\subsubsection{Neisseria Meningitidis}
-
-\subsection{Additional analysis}
-\subsubsection{Distance matrices for cluster detection}
-
-
-
+\subsection{Background of Neisseria meningitidis NZMenB epidemic strain}
+In this study, we employed both real and simulated genomic data of Neisseria meningitidis to assess the pangenome pipeline, from pangenome graph construction to variant calling. Neisseria meningitidis is the primary agent responsible for bacterial meningitis, causing isolated incidents, outbreaks, and epidemics worldwide. In New Zealand (NZ), from 1991 to 2007, an extended serogroup B epidemic occurred due to a single strain known as NZMenB (designated B:4:P1.7-2,4), identified by the PorA variant (P1.7-2), and it still accounts for around one-third of meningococcal disease cases in NZ.  Our unpublished phylogenetic analysis of the whole-genome sequencing (WGS) data of NZMenB revealed that the epidemic was caused by three significant sequence types (STs) based on the multilocus sequence typing (MLST) of seven housekeeping genes (Refs).
+\subsection{Long read data}
+To analyze the whole-genome sequencing (WGS) dataset, the original reference NC_017518 of ST42 was used. To obtain complete reference genomes for NMI01191 of ST41 and NMI97348 of ST154, we conducted Nanopore long-read sequencing. The high molecular weight genomic DNA was extracted using the Gentra Puregene Yeast/Bact. Kit (QIAGEN) and purified with Agilent Magnetic Beads We used 400 ng of high molecular weight genomic DNA to construct sequence libraries utilizing the Rapid Barcoding Sequencing (SQK-RBK004). The libraries were sequenced on R9.4.1 MinION flow cells. We used Flye_v.2.8-1 (ref) for de novo assembly, and Illumina sequencing reads were employed to polish the assembly using Unicycler_v.0.4.8. Consequently, we were able to obtain complete NZMenB genomes (3STs) comprising NMI01191 of ST41, NMI97348 of ST154, and NC_017518 of ST42
+\subsection{Simulate genomes for pangenome graph construction}
+Mauve alignment demonstrated big inversions among the three STs genomes (Supplementary Fig. ).  To evaluate the pangenome graph construction, we simulated three genomes from NC_017518 of ST42 by introducing either randomly generated SNPs or mutated according to the SNP differences of ST41 and ST154 relative to ST42. The simulation was followed by introducing 200 indels and two inversions using simuG (Ref), and the simulation results are presented in the Supplementary fig. We named the three simulated genomes as ST42sim, ST41sim, and ST154sim. ST42sim contains random 5k SNPs, 200 indels, and two inversions relative to ST42, while ST41sim contains 2892 SNPs, 200 indels, and two inversions compared to ST42, and ST154 contains 4283 SNPs, 200 indels, and two inversions compared to ST42. We combined the three simulated genomes with ST42, which we referred to as 4Sim genomes, and used them for further analysis.
+\subsection{Download diverse Neisseria genomes from NCBI}
+To expand our evaluation of pangenome graph construction to more diverse genomes, we downloaded 131 Neisseria genomes from the NCBI (Supplementary table). The 131 Neisseria genomes (NM) were comprised of 8, 20, 21, 62, 2, 13, and 4 of group A, B, C, W, X, Y, and ungrouped, respectively
+\subsection{Pangenome graph construction by PGGB }
+We utilized the PanGenome Graph Builder (PGGB) pipeline, which is a reference-free method for constructing pangenome graphs (pggb ref.). PGGB employs all-to-all whole genome alignments by wfmash, graph induction by seqwish, and progressive normalization by smoothxg and gfaffix. By using the pangenome graph constructed by PGGB, it is possible to identify various genetic variations such as structural variants, rearrangements, and small variants including single nucleotide polymorphisms and insertions/deletions simultaneously, using vg deconstruction.
+We constructed pangenome graphs for the 4Sim genomes, 3STs of NZmenB, and 131NM genomes using PGGB. To construct the pangenome graphs, we initially aligned the start of ST41 and ST154 with ST42 for the 3STs, and all 131 genomes were fixed to start with the dnaA gene using circlater (ref).
+There are three essential parameters for pggb pangenome graph construction, i.e., -n, number of genomes, -s, segment length that defines the seed length used in wfmash, and -p, the minimum pairwise identity between seeds. To estimate the pairwise distance for each dataset, we used mash triangle (ref). For constructing the pangenome graph, we set the parameters -s, -p, -n to 1000, 96, 4 for the 4Sim genomes, 2000, 95, 3 for the 3STs, and 10000, 95, 131 for the 131NM genomes, respectively. 
+\subsection{Vg deconstruct to call variants in the graphs}
+To identify both small and large variants from the pangenome graph, we employed the vg toolkit to deconstruct the variants into VCF files using the reference NC_017518 of ST42. We set the parameters -a to process all snarls, including nested ones, -e to consider only traversals that correspond to paths in the graph, and -K to retain conflicted genotypes to obtain the full list of variations in the graphs.
+As the ground truth of the simulated genomes, ST42Sim, ST41Sim, and ST154Sim, were known, we compared the variations in the 4Sim genome graph against the ground truth.
+\subsection{Simulated NGS dataset of Neisseria Meningitidis for pangenome graph based variant calling}
+In addition to the comparative genomics analysis of the paths (genomes) based on the genome graphs, these graphs can also serve as a pangenome reference for NGS data analysis. To evaluate the genome graph-based pipeline for NGS data mapping and variant calling using the vg toolkit, we simulated 100X 2X150 paired NGS data with an error rate of 0.5% using wgsim(ref).
+We began with eight genomes, which included the 3ST genomes and the three simulated genomes, and two mutated genomes, ST41Mut and ST154Mut, based on the SNP difference of ST41 and ST154 to ST42. To generate a set of 40 genomes, we initially introduced 2000 SNPs for each of the eight genomes with five repeats, followed by two additional rounds of 2000 SNPs (40 genomes per round) using SimuG (ref). Consequently, we obtained 128 genomes distributed among eight groups, including ST42, ST42Sim, ST41, ST41Mut, ST41Sim, ST154, ST154Mut, and ST154Sim (see Supplementary figures for details).
+\subsection{Map the simulated NGS data to graph using the vg toolkit}
+To map the simulated NGS data to the 4Sim genome graph using the vg toolkit, we initially converted the 4Sim graph into 256bp chunks using vg mod -X 256. We then employed vg index to generate the index for the graph. Subsequently, vg map was utilized to map the NGS data against the graph. We also used vg stats to check the mapping statistics. 
+\subsection{Variant calling for NGS data against genome graph}
+There are two approaches to call variants in pangenome graphs: genotyping known variants and novel variant calling. In this study, we utilized both methods to call variants for the 128 simulated NGS data against the 4Sim genome graph.
+To genotype known variants in the graph, we employed vg pack to calculate the support reads for each gam. We then utilized vg call to genotype the known variants for each sample based on the snarls file generated from the 4Sim genome graph.
+To consider novel variants from the reads, we employed vg augment to augment each gam file. We then indexed the augmented graph, computed all reads support and called variants 
+To assess the performance of variant calling, we compared the variants called from the graph to the simulation record of SNPs to determine the percentage of simulated SNPs being correctly identified.
+\subsection{Distance matrices for cluster detection}
+To analyze the cluster relationship among the 131 NM genomes, we utilized odgi paths to extract jaccard distance matrices among the paths in the pangenome graph. We then employed Hierarchical Clustering to construct the phylogenetic relationship among the genomes. To assess the accuracy of the clustering relationship, we compared it to the one obtained by kmer-based SNP phylogenetic analysis.
+For kmer-based SNP analysis, we used kSNP3, a reference-free, contig-based analysis, to extract the SNPs derived from kmer length 31 that were present in 80% of the isolates. Phylogenetic analyses were constructed from the kmer-based SNP alignment using maximum likelihood (ML) under the best-fit model by Bayesian Information Criterion with iqtree-v.2.0.6. The robustness of the clades was estimated with 2000 ultra-fast bootstrap replicates. 
 
 \paragraph{Level 4}
 \subparagraph{Level 5}
